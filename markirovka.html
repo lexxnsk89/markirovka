@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Маркировка">
+    <meta name="theme-color" content="#0078d4">
+    <meta name="description" content="Система маркировки электрических щитов">
+    
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%230078d4'/><polygon points='55,15 15,65 45,65 40,85 85,35 55,35 60,15' fill='white' transform='translate(3,0)'/></svg>">
+    
+    <title>Маркировка щита</title>
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --bg: #e8f0f8;
+            --glass: rgba(255,255,255,0.75);
+            --text: #1a2a3a;
+            --text-secondary: #5a6a7a;
+            --accent: #0078d4;
+            --green: #10893e;
+            --gold: #f0a030;
+            --red: #d13438;
+            --input-bg: rgba(255,255,255,0.85);
+            --input-border: rgba(180,200,220,0.8);
+            --shadow: 0 8px 32px rgba(0,0,0,0.1);
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #dce8f5 0%, #e8f0f8 30%, #f0f4fa 60%, #e8f0f8 100%);
+            color: var(--text);
+            padding: 8px;
+            padding-top: calc(var(--safe-top) + 8px);
+            padding-bottom: calc(var(--safe-bottom) + 8px);
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .header {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px;
+            padding: 12px;
+            background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.9); border-radius: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo-icon {
+            width: 36px; height: 36px; min-width: 36px;
+            background: linear-gradient(135deg, #0078d4, #00a0ff);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+        }
+        .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+        .logo-text h1 { font-size: 16px; font-weight: 700; }
+        .logo-text span { display: none; font-size: 11px; color: var(--text-secondary); }
+
+        .header-right { display: flex; align-items: center; gap: 6px; }
+        .project-name-input {
+            padding: 8px; border-radius: 8px; border: 1px solid var(--input-border);
+            font-size: 12px; background: var(--input-bg); width: 100px;
+        }
+        .project-buttons { display: flex; gap: 4px; }
+        .btn-save, .btn-load {
+            padding: 8px 8px; border-radius: 8px; font-size: 14px;
+            cursor: pointer; border: none; color: white;
+        }
+        .btn-save { background: var(--green); }
+        .btn-load { background: var(--accent); }
+
+        .controls {
+            display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px;
+            padding: 10px;
+            background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.9); border-radius: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .margin-setting {
+            display: flex; align-items: center; gap: 4px;
+            background: var(--input-bg); padding: 6px 8px;
+            border-radius: 8px; border: 1px solid var(--input-border); font-size: 11px;
+        }
+        .margin-setting input {
+            width: 36px; padding: 5px; border: 1px solid var(--input-border);
+            border-radius: 6px; font-size: 11px; text-align: center; background: #fff;
+        }
+
+        .toggle-setting {
+            display: flex; align-items: center; gap: 4px;
+            background: var(--input-bg); padding: 6px 8px;
+            border-radius: 8px; border: 1px solid var(--input-border); font-size: 16px; cursor: pointer;
+        }
+        .toggle-setting input { display: none; }
+        .toggle-switch {
+            width: 36px; height: 20px; background: #c0ccd8; border-radius: 10px;
+            position: relative; transition: all 0.3s;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: all 0.3s;
+        }
+        .toggle-setting input:checked + .toggle-switch { background: var(--green); }
+        .toggle-setting input:checked + .toggle-switch::after { left: 18px; }
+
+        .btn {
+            padding: 8px 10px; border-radius: 8px; font-size: 15px; font-weight: 600;
+            cursor: pointer; border: none; background: var(--accent); color: white;
+            white-space: nowrap;
+        }
+        .btn:active { transform: scale(0.95); opacity: 0.8; }
+        .btn-print { background: var(--red); }
+        .btn-row { background: var(--gold); color: #3a2a00; }
+
+        .main-content { display: flex; flex-direction: column; gap: 10px; }
+
+        .table-section {
+            background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 10px; border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.9); box-shadow: var(--shadow);
+        }
+
+        .mobile-cards { display: flex; flex-direction: column; gap: 10px; }
+
+        .card {
+            background: #fff; border-radius: 12px; padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex; flex-direction: column; gap: 6px;
+        }
+
+        .card-row { display: flex; gap: 6px; align-items: center; }
+        .card-label {
+            font-size: 10px; color: var(--text-secondary); text-transform: uppercase;
+            letter-spacing: 0.5px; min-width: 55px; font-weight: 600;
+        }
+        .card-value { flex: 1; display: flex; gap: 4px; align-items: center; }
+        .card-value input, .card-value select {
+            flex: 1; padding: 8px; border: 1px solid var(--input-border);
+            border-radius: 8px; font-size: 14px; background: #fff; color: var(--text);
+        }
+
+        .card-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+        .card-actions button {
+            padding: 10px 16px; border-radius: 10px; font-size: 14px;
+            font-weight: 600; cursor: pointer; border: none;
+        }
+        .copy-card-btn { background: var(--accent); color: white; }
+        .delete-card-btn { background: transparent; color: var(--red); border: 1px solid var(--red) !important; }
+        .delete-card-btn:active { background: var(--red); color: #fff; }
+
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 11px; color: var(--accent); font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+        }
+        .card-break {
+            background: rgba(240,160,48,0.1); text-align: center;
+            padding: 12px; border-radius: 10px; font-weight: 600;
+            color: var(--gold); font-size: 14px;
+        }
+
+        .group-input.auto { background: rgba(16,137,62,0.06); color: var(--green); font-weight: bold; border-color: var(--green); }
+
+        .preview-section {
+            background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 10px; border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.9); box-shadow: var(--shadow);
+            overflow-x: auto;
+        }
+        .preview-section h3 { font-size: 12px; color: var(--accent); margin-bottom: 6px; }
+        .preview-info {
+            font-size: 10px; color: var(--text-secondary); margin-bottom: 6px;
+            font-family: monospace; background: rgba(0,0,0,0.03); padding: 6px 8px; border-radius: 6px;
+        }
+        .preview-sheet {
+            background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.1);
+            display: flex; flex-wrap: wrap; column-gap: 1mm; row-gap: 5mm;
+            align-content: flex-start; overflow-x: auto; border-radius: 8px;
+            min-height: 80px;
+        }
+
+        .toast {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #fff; padding: 12px 20px;
+            border-radius: 20px; font-size: 14px; z-index: 9999;
+            pointer-events: none; opacity: 0; transition: opacity 0.3s, transform 0.3s;
+            transform: translateX(-50%) translateY(10px);
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        @media (min-width: 768px) {
+            body { padding: 20px; }
+            .logo-text span { display: block; }
+            .logo-text h1 { font-size: 22px; }
+            .logo-icon { width: 44px; height: 44px; border-radius: 12px; }
+            .logo-icon svg { width: 26px; height: 26px; }
+            .project-name-input { width: 180px; font-size: 13px; }
+            .btn-save, .btn-load { font-size: 13px; padding: 10px 14px; }
+            .btn { font-size: 13px; padding: 10px 14px; }
+            .main-content { flex-direction: row; }
+            .table-section { flex: 1; }
+            .preview-section { flex: 0 0 450px; }
+        }
+
+        @media (min-width: 1100px) {
+            .preview-section { flex: 0 0 750px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h6l-1 8 10-12h-6l1-8z"/></svg></div>
+            <div class="logo-text"><h1>Маркировка</h1><span>Электрические щиты</span></div>
+        </div>
+        <div class="header-right">
+            <input type="text" class="project-name-input" id="projectName" placeholder="Проект" oninput="updateTitle()">
+            <div class="project-buttons">
+                <button class="btn-save" onclick="saveProject()">💾</button>
+                <button class="btn-load" onclick="loadProject()">📂</button>
+                <input type="file" id="fileInput" accept=".json" style="display:none;" onchange="handleFileLoad(event)">
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="margin-setting"><span>📏</span><input type="number" id="marginTop" value="3" min="0" max="20" step="1" onchange="updatePreview()"></div>
+        <label class="toggle-setting"><input type="checkbox" id="autoNumbering" onchange="toggleAutoNumbering()"><div class="toggle-switch"></div></label>
+        <label class="toggle-setting"><input type="checkbox" id="linkIcons" onchange="toggleLinkIcons()"><div class="toggle-switch"></div></label>
+        <button class="btn" onclick="addRow()">➕</button>
+        <button class="btn btn-row" onclick="addRowBreak()">↩️</button>
+        <button class="btn" onclick="clearAll()">🗑️</button>
+        <button class="btn btn-print" onclick="printLabels()">🖨️</button>
+    </div>
+
+    <div class="main-content">
+        <div class="table-section">
+            <div class="mobile-cards" id="mobileCards"></div>
+        </div>
+        <div class="preview-section">
+            <h3>▸ Предпросмотр</h3>
+            <div class="preview-info" id="previewInfo"></div>
+            <div id="previewArea" class="preview-sheet"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let rowsData = [];
+
+        const typeIcons = {
+            'розетки': `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#1a2a3a" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="6"/><circle cx="9.5" cy="12" r="1.2" fill="#1a2a3a" stroke="none"/><circle cx="14.5" cy="12" r="1.2" fill="#1a2a3a" stroke="none"/></svg>`,
+            'свет': `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#1a2a3a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M10 18v-4c0-1.5-1-2.5-1.5-3.5C7.5 9 7 7.5 7 6c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.5-.5 3-1.5 4.5C15 11.5 14 12.5 14 14v4h-4z"/><path d="M9 9c1 .5 2 1 3 1s2-.5 3-1"/><path d="M10 12c.7.3 1.3.5 2 .5s1.3-.2 2-.5"/></svg>`,
+            'стир. машина': `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#1a2a3a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="5"/><circle cx="12" cy="13" r="1.8" fill="#1a2a3a" stroke="none"/><line x1="12" y1="6" x2="12" y2="8"/><circle cx="12" cy="5" r="0.8" fill="#1a2a3a" stroke="none"/></svg>`,
+            'варочная': `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#1a2a3a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><circle cx="7" cy="14" r="3"/><circle cx="7" cy="14" r="1" fill="#1a2a3a" stroke="none"/><circle cx="17" cy="14" r="3"/><circle cx="17" cy="14" r="1" fill="#1a2a3a" stroke="none"/><circle cx="7" cy="6.5" r="0.7" fill="#1a2a3a" stroke="none"/><circle cx="12" cy="6.5" r="0.7" fill="#1a2a3a" stroke="none"/><circle cx="17" cy="6.5" r="0.7" fill="#1a2a3a" stroke="none"/></svg>`,
+            'духовка': `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#1a2a3a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><line x1="3" y1="12" x2="21" y2="12"/><circle cx="7" cy="9" r="0.8" fill="#1a2a3a" stroke="none"/><circle cx="7" cy="15" r="0.8" fill="#1a2a3a" stroke="none"/></svg>`,
+            'кондиционер': `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#1a2a3a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="7" rx="1"/><line x1="7" y1="15" x2="17" y2="15"/><line x1="9" y1="18" x2="15" y2="18"/><line x1="12" y1="15" x2="12" y2="18"/><rect x="8" y="6" width="8" height="3" rx="0.5" fill="#1a2a3a" stroke="none"/></svg>`,
+            'другое': `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#1a2a3a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="1.2" fill="#1a2a3a" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="#1a2a3a" stroke="none"/><circle cx="12" cy="18" r="1.2" fill="#1a2a3a" stroke="none"/></svg>`,
+            'пусто': ''
+        };
+
+        const nameToIcon = {
+            'Розетки': 'розетки', 'Свет': 'свет', 'Стир. машина': 'стир. машина',
+            'Варочная': 'варочная', 'Духовка': 'духовка', 'Кондиционер': 'кондиционер'
+        };
+
+        const labelSizes = {
+            '1': { width: 17.5, height: 25, name: '1 м' },
+            '2': { width: 35, height: 25, name: '2 м' },
+            '3': { width: 52.5, height: 25, name: '3 м' },
+            '4': { width: 70, height: 25, name: '4 м' }
+        };
+
+        const roomOptions = ['Кухня', 'Гостиная', 'Кухня-гостиная', 'Спальня', 'Санузел', 'Ванная', 'Прихожая', 'Гардероб', 'Детская', 'Другое'];
+        const groupOptions = ['ВВОД', 'Противопожарное УЗО', 'Розетки', 'Свет', 'Стир. машина', 'Варочная', 'Духовка', 'Кондиционер', 'Другое'];
+        const ROW_GAP = 5;
+
+        function getMargin() { return parseInt(document.getElementById('marginTop').value) || 3; }
+        function isAutoNumbering() { return document.getElementById('autoNumbering').checked; }
+        function isLinkIcons() { return document.getElementById('linkIcons').checked; }
+
+        function updateTitle() {
+            const name = document.getElementById('projectName').value.trim();
+            document.title = name || 'Маркировка щита';
+        }
+
+        function getLastGroupNumber() {
+            for (let i = rowsData.length - 1; i >= 0; i--) {
+                if (!rowsData[i].isBreak && rowsData[i].groupNumber) {
+                    const val = parseInt(rowsData[i].groupNumber);
+                    if (!isNaN(val)) return val;
+                }
+            }
+            return 0;
+        }
+
+        function getNextGroupNumber() {
+            if (!isAutoNumbering()) return '';
+            const last = getLastGroupNumber();
+            return last > 0 ? last + 1 : 1;
+        }
+
+        window.toggleAutoNumbering = function() {
+            const auto = isAutoNumbering();
+            rowsData.forEach(row => {
+                if (!row.isBreak && auto && !row.groupNumber) row.groupNumber = getNextGroupNumber();
+            });
+            renderCards(); updatePreview();
+        };
+
+        window.toggleLinkIcons = function() {
+            if (isLinkIcons()) {
+                rowsData.forEach(row => {
+                    if (!row.isBreak && row.groupName && nameToIcon[row.groupName]) row.iconType = nameToIcon[row.groupName];
+                    else if (!row.isBreak && row.groupName === 'Другое') row.iconType = 'другое';
+                    else if (!row.isBreak && (row.groupName === 'ВВОД' || row.groupName === 'Противопожарное УЗО')) row.iconType = 'пусто';
+                });
+            }
+            renderCards(); updatePreview();
+        };
+
+        function addRow() {
+            const auto = isAutoNumbering();
+            const lastRow = rowsData.length > 0 ? rowsData[rowsData.length - 1] : null;
+            const newRow = {
+                moduleType: '1', groupNumber: '', fontGroup: '9pt',
+                room: '', fontRoom: '7pt', groupName: '', fontGroupName: '7pt',
+                iconType: 'пусто', iconName: '', isBreak: false
+            };
+            if (lastRow && !lastRow.isBreak) {
+                newRow.moduleType = lastRow.moduleType;
+                newRow.fontGroup = lastRow.fontGroup;
+                newRow.fontRoom = lastRow.fontRoom;
+                newRow.fontGroupName = lastRow.fontGroupName;
+            }
+            if (auto) newRow.groupNumber = getNextGroupNumber();
+            rowsData.push(newRow);
+            renderCards(); updatePreview();
+        }
+
+        window.addRowBreak = function() {
+            rowsData.push({ isBreak: true });
+            renderCards(); updatePreview();
+        };
+
+        function clearAll() {
+            if (confirm('Удалить все строки?')) { rowsData = []; addRow(); }
+        }
+
+        window.deleteRow = function(index) {
+            rowsData.splice(index, 1);
+            if (rowsData.length === 0) addRow();
+            renderCards(); updatePreview();
+        };
+
+        window.copyRow = function(index) {
+            const source = rowsData[index];
+            if (!source || source.isBreak) return;
+            const auto = isAutoNumbering();
+            const copy = { ...source };
+            if (auto) copy.groupNumber = getNextGroupNumber();
+            rowsData.splice(index + 1, 0, copy);
+            renderCards(); updatePreview();
+        };
+
+        function selectHTML(options, selectedVal, index, field) {
+            let h = `<select onchange="updateField(${index},'${field}',this.value)">`;
+            options.forEach(opt => {
+                const val = Array.isArray(opt) ? opt[0] : opt;
+                const label = Array.isArray(opt) ? opt[1] : opt;
+                h += `<option value="${val}"${val === selectedVal ? ' selected' : ''}>${label}</option>`;
+            });
+            return h + `</select>`;
+        }
+
+        function iconSelectHTML(selectedVal, index) {
+            const icons = [['пусто', '—'], ['розетки', '🔌'], ['свет', '💡'], ['стир. машина', '🫧'], ['варочная', '🍳'], ['духовка', '🔥'], ['кондиционер', '❄️'], ['другое', '📝']];
+            return selectHTML(icons, selectedVal, index, 'iconType');
+        }
+
+        window.updateField = function(index, field, value) {
+            if (rowsData[index] && !rowsData[index].isBreak) {
+                rowsData[index][field] = value;
+                if (field === 'groupName' && isLinkIcons()) {
+                    if (value === 'Другое') rowsData[index].iconType = 'другое';
+                    else if (nameToIcon[value]) rowsData[index].iconType = nameToIcon[value];
+                    else if (value === 'ВВОД' || value === 'Противопожарное УЗО') rowsData[index].iconType = 'пусто';
+                }
+                updatePreview();
+            }
+        };
+
+        function renderCards() {
+            const container = document.getElementById('mobileCards');
+            container.innerHTML = '';
+            rowsData.forEach((data, i) => {
+                if (data.isBreak) {
+                    const div = document.createElement('div');
+                    div.className = 'card-break';
+                    div.textContent = '↩️ Новый ряд';
+                    container.appendChild(div);
+                } else {
+                    const auto = isAutoNumbering();
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <div class="card-header">Группа №${i + 1}</div>
+                        <div class="card-row"><span class="card-label">Модуль</span><div class="card-value">${selectHTML([['1','1 м'],['2','2 м'],['3','3 м'],['4','4 м']], data.moduleType, i, 'moduleType')}</div></div>
+                        <div class="card-row"><span class="card-label">Номер</span><div class="card-value"><input type="text" class="group-input${auto?' auto':''}" value="${data.groupNumber||''}" ${auto?'readonly':''} onchange="updateField(${i},'groupNumber',this.value)"></div></div>
+                        <div class="card-row"><span class="card-label">Помещ.</span><div class="card-value">${selectHTML(roomOptions, data.room, i, 'room')}</div></div>
+                        <div class="card-row"><span class="card-label">Назнач.</span><div class="card-value">${selectHTML(groupOptions, data.groupName, i, 'groupName')}</div></div>
+                        <div class="card-row"><span class="card-label">Иконка</span><div class="card-value">${iconSelectHTML(data.iconType, i)}</div></div>
+                        <div class="card-actions">
+                            <button class="copy-card-btn" onclick="copyRow(${i})">📋 Копировать</button>
+                            <button class="delete-card-btn" onclick="deleteRow(${i})">✕ Удалить</button>
+                        </div>`;
+                    container.appendChild(card);
+                }
+            });
+        }
+
+        function updatePreview() {
+            const preview = document.getElementById('previewArea'), previewInfo = document.getElementById('previewInfo');
+            if (!preview) return;
+            const margin = getMargin();
+            const sheetW = 297 - margin * 2, sheetH = 210 - margin * 2;
+            preview.style.padding = `${margin}mm 0 0 ${margin}mm`;
+            let totalLabels = 0;
+            rowsData.forEach(d => { if (!d.isBreak && (d.groupNumber || d.room || d.groupName)) totalLabels++; });
+            previewInfo.textContent = `Отступ: ${margin} мм | Ряды: ${ROW_GAP} мм | Наклеек: ${totalLabels}`;
+            preview.innerHTML = '';
+            const blackLineH = 2, iconSize = 5, iconBottom = 1;
+            rowsData.forEach(data => {
+                if (data.isBreak) { const sep = document.createElement('div'); sep.style.cssText = 'width:100%; flex-basis:100%; height:0;'; preview.appendChild(sep); return; }
+                if (!data.groupNumber && !data.room && !data.groupName) return;
+                const ls = labelSizes[data.moduleType] || labelSizes['1'];
+                const groupTop = blackLineH + 1, roomTop = groupTop + 3.5, iconTop = ls.height - iconBottom - iconSize;
+                const w = document.createElement('div');
+                w.style.cssText = `width:${ls.width}mm; height:${ls.height}mm; border:1px solid #333; position:relative; overflow:hidden; background:#fff; font-family:Arial,sans-serif; flex-shrink:0;`;
+                const line = document.createElement('div'); line.style.cssText = `position:absolute; top:0; left:2mm; width:calc(100% - 4mm); height:${blackLineH}mm; background:#1a2a3a; z-index:10;`; w.appendChild(line);
+                const gd = document.createElement('div'); gd.style.cssText = `position:absolute; top:${groupTop}mm; left:0; right:0; text-align:center; font-weight:bold; font-size:${data.fontGroup}; line-height:1.1; z-index:5; color:#1a2a3a;`; gd.textContent = data.groupNumber || ''; w.appendChild(gd);
+                const rd = document.createElement('div'); rd.style.cssText = `position:absolute; top:${roomTop}mm; left:0; right:0; text-align:center; font-size:${data.fontRoom}; line-height:1.15; color:#1a2a3a;`; rd.textContent = data.room || ''; w.appendChild(rd);
+                const rb = roomTop + 2.5, mt = (rb + iconTop) / 2;
+                const nd = document.createElement('div'); nd.style.cssText = `position:absolute; top:${mt}mm; left:0; right:0; text-align:center; font-size:${data.fontGroupName}; line-height:1.15; transform:translateY(-50%); color:#1a2a3a;`; nd.textContent = data.groupName || ''; w.appendChild(nd);
+                if (data.iconType !== 'пусто') {
+                    const idiv = document.createElement('div'); idiv.style.cssText = `position:absolute; bottom:${iconBottom}mm; left:0; right:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; z-index:3;`;
+                    const inner = document.createElement('div'); inner.style.cssText = `width:${iconSize}mm; height:${iconSize}mm;`; inner.innerHTML = typeIcons[data.iconType] || typeIcons['другое']; idiv.appendChild(inner);
+                    if (data.iconType === 'другое' && data.iconName) { const cs = document.createElement('div'); cs.style.cssText = 'font-size:65%; color:#5a6a7a; line-height:1;'; cs.textContent = data.iconName; idiv.appendChild(cs); }
+                    w.appendChild(idiv);
+                }
+                preview.appendChild(w);
+            });
+        }
+
+        window.saveProject = function() {
+            const projectName = document.getElementById('projectName').value.trim() || 'проект_щита';
+            const projectData = { projectName, version: '1.0', marginTop: getMargin(), autoNumbering: isAutoNumbering(), linkIcons: isLinkIcons(), rows: rowsData };
+            const json = JSON.stringify(projectData, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url;
+            a.download = projectName.replace(/[^а-яА-ЯёЁa-zA-Z0-9]/g, '_') + '.json';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            showToast('💾 Сохранено');
+        };
+
+        window.loadProject = function() { document.getElementById('fileInput').click(); };
+        window.handleFileLoad = function(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const projectData = JSON.parse(e.target.result);
+                    if (projectData.projectName) { document.getElementById('projectName').value = projectData.projectName; updateTitle(); }
+                    document.getElementById('marginTop').value = projectData.marginTop || 3;
+                    document.getElementById('autoNumbering').checked = projectData.autoNumbering || false;
+                    document.getElementById('linkIcons').checked = projectData.linkIcons || false;
+                    rowsData = projectData.rows || [];
+                    if (rowsData.length === 0) addRow();
+                    else { renderCards(); updatePreview(); }
+                    showToast('📂 Загружено');
+                } catch (err) { alert('Ошибка загрузки'); }
+            };
+            reader.readAsText(file); event.target.value = '';
+        };
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg; toast.classList.add('show');
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => { toast.classList.remove('show'); }, 2000);
+        }
+
+        function printLabels() {
+            const margin = getMargin();
+            if (!rowsData.some(d => !d.isBreak && (d.groupNumber || d.room || d.groupName))) { alert('Добавьте строки!'); return; }
+            const win = window.open('', '_blank');
+            const blackLineH = 2, iconSize = 5, iconBottom = 1;
+            let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><style>
+                @page { size: A4 landscape; margin: 0; } body { margin:0; padding:${margin}mm 0 0 ${margin}mm; font-family:Arial; background:#fff; }
+                .page { display:flex; flex-wrap:wrap; column-gap:1mm; row-gap:${ROW_GAP}mm; }
+                .label { border:1px solid #000; position:relative; overflow:hidden; background:#fff; flex-shrink:0; }
+                .black-line { position:absolute; top:0; left:2mm; width:calc(100% - 4mm); height:${blackLineH}mm; background:#000; z-index:10; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+                .group-number { position:absolute; left:0; right:0; text-align:center; font-weight:bold; line-height:1.1; z-index:5; color:#000; }
+                .room-line { position:absolute; left:0; right:0; text-align:center; line-height:1.15; color:#000; }
+                .group-name-line { position:absolute; left:0; right:0; text-align:center; line-height:1.15; transform:translateY(-50%); color:#000; }
+                .icon-container { position:absolute; bottom:${iconBottom}mm; left:0; right:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; z-index:3; }
+                .icon-inner { width:${iconSize}mm; height:${iconSize}mm; } .icon-inner svg { width:100%; height:100%; } .custom-icon { font-size:65%; color:#555; line-height:1; }
+                .row-break-print { width:100%; flex-basis:100%; height:0; }
+            </style></head><body><div class="page">`;
+            rowsData.forEach(data => {
+                if (data.isBreak) { html += `<div class="row-break-print"></div>`; return; }
+                if (!data.groupNumber && !data.room && !data.groupName) return;
+                const ls = labelSizes[data.moduleType] || labelSizes['1'];
+                const groupTop = blackLineH + 1, roomTop = groupTop + 3.5, iconTop = ls.height - iconBottom - iconSize, rb = roomTop + 2.5, mt = (rb + iconTop) / 2;
+                html += `<div class="label" style="width:${ls.width}mm; height:${ls.height}mm;"><div class="black-line"></div>
+                    <div class="group-number" style="top:${groupTop}mm; font-size:${data.fontGroup};">${data.groupNumber}</div>
+                    <div class="room-line" style="top:${roomTop}mm; font-size:${data.fontRoom};">${data.room}</div>
+                    <div class="group-name-line" style="top:${mt}mm; font-size:${data.fontGroupName};">${data.groupName}</div>`;
+                if (data.iconType !== 'пусто') { html += `<div class="icon-container"><div class="icon-inner">${typeIcons[data.iconType] || typeIcons['другое']}</div>`; if (data.iconType === 'другое' && data.iconName) html += `<div class="custom-icon">${data.iconName}</div>`; html += `</div>`; }
+                html += `</div>`;
+            });
+            html += '</div></body></html>'; win.document.write(html); win.document.close(); setTimeout(() => win.print(), 500);
+        }
+
+        addRow();
+    </script>
+</body>
+</html>
