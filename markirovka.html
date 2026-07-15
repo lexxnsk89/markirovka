@@ -135,15 +135,20 @@
             display: flex; flex-direction: column; gap: 6px;
         }
 
-        .card-row { display: flex; gap: 6px; align-items: center; }
+        .card-row { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; }
         .card-label {
             font-size: 10px; color: var(--text-secondary); text-transform: uppercase;
-            letter-spacing: 0.5px; min-width: 55px; font-weight: 600;
+            letter-spacing: 0.5px; min-width: 55px; font-weight: 600; padding-top: 8px;
         }
-        .card-value { flex: 1; display: flex; gap: 4px; align-items: center; }
+        .card-value { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
         .card-value input, .card-value select {
-            flex: 1; padding: 8px; border: 1px solid var(--input-border);
+            width: 100%; padding: 8px; border: 1px solid var(--input-border);
             border-radius: 8px; font-size: 14px; background: #fff; color: var(--text);
+        }
+
+        .other-input {
+            width: 100%; padding: 8px; border: 1px solid var(--accent) !important;
+            border-radius: 8px; font-size: 13px; background: rgba(0,120,212,0.03); color: var(--text);
         }
 
         .card-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
@@ -333,8 +338,10 @@
             const lastRow = rowsData.length > 0 ? rowsData[rowsData.length - 1] : null;
             const newRow = {
                 moduleType: '1', groupNumber: '', fontGroup: '9pt',
-                room: '', fontRoom: '7pt', groupName: '', fontGroupName: '7pt',
-                iconType: 'пусто', iconName: '', isBreak: false
+                room: '', roomCustom: '',
+                fontRoom: '7pt', groupName: '', groupCustom: '',
+                fontGroupName: '7pt', iconType: 'пусто', iconName: '',
+                isBreak: false
             };
             if (lastRow && !lastRow.isBreak) {
                 newRow.moduleType = lastRow.moduleType;
@@ -366,10 +373,55 @@
             const source = rowsData[index];
             if (!source || source.isBreak) return;
             const auto = isAutoNumbering();
-            const copy = { ...source };
+            const copy = JSON.parse(JSON.stringify(source));
             if (auto) copy.groupNumber = getNextGroupNumber();
             rowsData.splice(index + 1, 0, copy);
             renderCards(); updatePreview();
+        };
+
+        // 🔧 Получить отображаемое значение (для "Другое" — кастомное)
+        function getDisplayValue(row, field) {
+            if (field === 'room') {
+                return row.room === 'Другое' ? (row.roomCustom || '') : (row.room || '');
+            }
+            if (field === 'groupName') {
+                return row.groupName === 'Другое' ? (row.groupCustom || '') : (row.groupName || '');
+            }
+            return row[field] || '';
+        }
+
+        window.updateField = function(index, field, value) {
+            if (!rowsData[index] || rowsData[index].isBreak) return;
+            
+            rowsData[index][field] = value;
+            
+            // Если выбрали "Другое" — сбрасываем кастомное значение
+            if (field === 'room' && value === 'Другое') {
+                rowsData[index].roomCustom = rowsData[index].roomCustom || '';
+            }
+            if (field === 'groupName' && value === 'Другое') {
+                rowsData[index].groupCustom = rowsData[index].groupCustom || '';
+            }
+            
+            // Привязка иконок
+            if (field === 'groupName' && isLinkIcons()) {
+                if (value === 'Другое') rowsData[index].iconType = 'другое';
+                else if (nameToIcon[value]) rowsData[index].iconType = nameToIcon[value];
+                else if (value === 'ВВОД' || value === 'Противопожарное УЗО') rowsData[index].iconType = 'пусто';
+            }
+            
+            // Если поле "Другое" — перерисовываем карточку
+            if (field === 'room' || field === 'groupName') {
+                renderCards();
+            }
+            updatePreview();
+        };
+
+        // 🔧 Обновление кастомного поля
+        window.updateCustomField = function(index, field, value) {
+            if (!rowsData[index] || rowsData[index].isBreak) return;
+            rowsData[index][field] = value;
+            updatePreview();
         };
 
         function selectHTML(options, selectedVal, index, field) {
@@ -387,18 +439,6 @@
             return selectHTML(icons, selectedVal, index, 'iconType');
         }
 
-        window.updateField = function(index, field, value) {
-            if (rowsData[index] && !rowsData[index].isBreak) {
-                rowsData[index][field] = value;
-                if (field === 'groupName' && isLinkIcons()) {
-                    if (value === 'Другое') rowsData[index].iconType = 'другое';
-                    else if (nameToIcon[value]) rowsData[index].iconType = nameToIcon[value];
-                    else if (value === 'ВВОД' || value === 'Противопожарное УЗО') rowsData[index].iconType = 'пусто';
-                }
-                updatePreview();
-            }
-        };
-
         function renderCards() {
             const container = document.getElementById('mobileCards');
             container.innerHTML = '';
@@ -412,12 +452,25 @@
                     const auto = isAutoNumbering();
                     const card = document.createElement('div');
                     card.className = 'card';
+                    
+                    // Помещение
+                    let roomHTML = selectHTML(roomOptions, data.room, i, 'room');
+                    if (data.room === 'Другое') {
+                        roomHTML += `<input type="text" class="other-input" placeholder="Введите помещение..." value="${data.roomCustom || ''}" oninput="updateCustomField(${i},'roomCustom',this.value)">`;
+                    }
+                    
+                    // Назначение
+                    let groupHTML = selectHTML(groupOptions, data.groupName, i, 'groupName');
+                    if (data.groupName === 'Другое') {
+                        groupHTML += `<input type="text" class="other-input" placeholder="Введите назначение..." value="${data.groupCustom || ''}" oninput="updateCustomField(${i},'groupCustom',this.value)">`;
+                    }
+                    
                     card.innerHTML = `
                         <div class="card-header">Группа №${i + 1}</div>
                         <div class="card-row"><span class="card-label">Модуль</span><div class="card-value">${selectHTML([['1','1 м'],['2','2 м'],['3','3 м'],['4','4 м']], data.moduleType, i, 'moduleType')}</div></div>
                         <div class="card-row"><span class="card-label">Номер</span><div class="card-value"><input type="text" class="group-input${auto?' auto':''}" value="${data.groupNumber||''}" ${auto?'readonly':''} onchange="updateField(${i},'groupNumber',this.value)"></div></div>
-                        <div class="card-row"><span class="card-label">Помещ.</span><div class="card-value">${selectHTML(roomOptions, data.room, i, 'room')}</div></div>
-                        <div class="card-row"><span class="card-label">Назнач.</span><div class="card-value">${selectHTML(groupOptions, data.groupName, i, 'groupName')}</div></div>
+                        <div class="card-row"><span class="card-label">Помещ.</span><div class="card-value">${roomHTML}</div></div>
+                        <div class="card-row"><span class="card-label">Назнач.</span><div class="card-value">${groupHTML}</div></div>
                         <div class="card-row"><span class="card-label">Иконка</span><div class="card-value">${iconSelectHTML(data.iconType, i)}</div></div>
                         <div class="card-actions">
                             <button class="copy-card-btn" onclick="copyRow(${i})">📋 Копировать</button>
@@ -435,22 +488,24 @@
             const sheetW = 297 - margin * 2, sheetH = 210 - margin * 2;
             preview.style.padding = `${margin}mm 0 0 ${margin}mm`;
             let totalLabels = 0;
-            rowsData.forEach(d => { if (!d.isBreak && (d.groupNumber || d.room || d.groupName)) totalLabels++; });
+            rowsData.forEach(d => { if (!d.isBreak && (d.groupNumber || getDisplayValue(d, 'room') || getDisplayValue(d, 'groupName'))) totalLabels++; });
             previewInfo.textContent = `Отступ: ${margin} мм | Ряды: ${ROW_GAP} мм | Наклеек: ${totalLabels}`;
             preview.innerHTML = '';
             const blackLineH = 2, iconSize = 5, iconBottom = 1;
             rowsData.forEach(data => {
                 if (data.isBreak) { const sep = document.createElement('div'); sep.style.cssText = 'width:100%; flex-basis:100%; height:0;'; preview.appendChild(sep); return; }
-                if (!data.groupNumber && !data.room && !data.groupName) return;
+                const displayRoom = getDisplayValue(data, 'room');
+                const displayGroup = getDisplayValue(data, 'groupName');
+                if (!data.groupNumber && !displayRoom && !displayGroup) return;
                 const ls = labelSizes[data.moduleType] || labelSizes['1'];
                 const groupTop = blackLineH + 1, roomTop = groupTop + 3.5, iconTop = ls.height - iconBottom - iconSize;
                 const w = document.createElement('div');
                 w.style.cssText = `width:${ls.width}mm; height:${ls.height}mm; border:1px solid #333; position:relative; overflow:hidden; background:#fff; font-family:Arial,sans-serif; flex-shrink:0;`;
                 const line = document.createElement('div'); line.style.cssText = `position:absolute; top:0; left:2mm; width:calc(100% - 4mm); height:${blackLineH}mm; background:#1a2a3a; z-index:10;`; w.appendChild(line);
                 const gd = document.createElement('div'); gd.style.cssText = `position:absolute; top:${groupTop}mm; left:0; right:0; text-align:center; font-weight:bold; font-size:${data.fontGroup}; line-height:1.1; z-index:5; color:#1a2a3a;`; gd.textContent = data.groupNumber || ''; w.appendChild(gd);
-                const rd = document.createElement('div'); rd.style.cssText = `position:absolute; top:${roomTop}mm; left:0; right:0; text-align:center; font-size:${data.fontRoom}; line-height:1.15; color:#1a2a3a;`; rd.textContent = data.room || ''; w.appendChild(rd);
+                const rd = document.createElement('div'); rd.style.cssText = `position:absolute; top:${roomTop}mm; left:0; right:0; text-align:center; font-size:${data.fontRoom}; line-height:1.15; color:#1a2a3a;`; rd.textContent = displayRoom; w.appendChild(rd);
                 const rb = roomTop + 2.5, mt = (rb + iconTop) / 2;
-                const nd = document.createElement('div'); nd.style.cssText = `position:absolute; top:${mt}mm; left:0; right:0; text-align:center; font-size:${data.fontGroupName}; line-height:1.15; transform:translateY(-50%); color:#1a2a3a;`; nd.textContent = data.groupName || ''; w.appendChild(nd);
+                const nd = document.createElement('div'); nd.style.cssText = `position:absolute; top:${mt}mm; left:0; right:0; text-align:center; font-size:${data.fontGroupName}; line-height:1.15; transform:translateY(-50%); color:#1a2a3a;`; nd.textContent = displayGroup; w.appendChild(nd);
                 if (data.iconType !== 'пусто') {
                     const idiv = document.createElement('div'); idiv.style.cssText = `position:absolute; bottom:${iconBottom}mm; left:0; right:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; z-index:3;`;
                     const inner = document.createElement('div'); inner.style.cssText = `width:${iconSize}mm; height:${iconSize}mm;`; inner.innerHTML = typeIcons[data.iconType] || typeIcons['другое']; idiv.appendChild(inner);
@@ -485,6 +540,13 @@
                     document.getElementById('autoNumbering').checked = projectData.autoNumbering || false;
                     document.getElementById('linkIcons').checked = projectData.linkIcons || false;
                     rowsData = projectData.rows || [];
+                    // Обратная совместимость: добавляем поля roomCustom/groupCustom если их нет
+                    rowsData.forEach(row => {
+                        if (!row.isBreak) {
+                            if (row.roomCustom === undefined) row.roomCustom = '';
+                            if (row.groupCustom === undefined) row.groupCustom = '';
+                        }
+                    });
                     if (rowsData.length === 0) addRow();
                     else { renderCards(); updatePreview(); }
                     showToast('📂 Загружено');
@@ -502,7 +564,7 @@
 
         function printLabels() {
             const margin = getMargin();
-            if (!rowsData.some(d => !d.isBreak && (d.groupNumber || d.room || d.groupName))) { alert('Добавьте строки!'); return; }
+            if (!rowsData.some(d => !d.isBreak && (d.groupNumber || getDisplayValue(d, 'room') || getDisplayValue(d, 'groupName')))) { alert('Добавьте строки!'); return; }
             const win = window.open('', '_blank');
             const blackLineH = 2, iconSize = 5, iconBottom = 1;
             let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><style>
@@ -519,13 +581,15 @@
             </style></head><body><div class="page">`;
             rowsData.forEach(data => {
                 if (data.isBreak) { html += `<div class="row-break-print"></div>`; return; }
-                if (!data.groupNumber && !data.room && !data.groupName) return;
+                const displayRoom = getDisplayValue(data, 'room');
+                const displayGroup = getDisplayValue(data, 'groupName');
+                if (!data.groupNumber && !displayRoom && !displayGroup) return;
                 const ls = labelSizes[data.moduleType] || labelSizes['1'];
                 const groupTop = blackLineH + 1, roomTop = groupTop + 3.5, iconTop = ls.height - iconBottom - iconSize, rb = roomTop + 2.5, mt = (rb + iconTop) / 2;
                 html += `<div class="label" style="width:${ls.width}mm; height:${ls.height}mm;"><div class="black-line"></div>
                     <div class="group-number" style="top:${groupTop}mm; font-size:${data.fontGroup};">${data.groupNumber}</div>
-                    <div class="room-line" style="top:${roomTop}mm; font-size:${data.fontRoom};">${data.room}</div>
-                    <div class="group-name-line" style="top:${mt}mm; font-size:${data.fontGroupName};">${data.groupName}</div>`;
+                    <div class="room-line" style="top:${roomTop}mm; font-size:${data.fontRoom};">${displayRoom}</div>
+                    <div class="group-name-line" style="top:${mt}mm; font-size:${data.fontGroupName};">${displayGroup}</div>`;
                 if (data.iconType !== 'пусто') { html += `<div class="icon-container"><div class="icon-inner">${typeIcons[data.iconType] || typeIcons['другое']}</div>`; if (data.iconType === 'другое' && data.iconName) html += `<div class="custom-icon">${data.iconName}</div>`; html += `</div>`; }
                 html += `</div>`;
             });
@@ -535,4 +599,4 @@
         addRow();
     </script>
 </body>
-</html>
+</html>    
