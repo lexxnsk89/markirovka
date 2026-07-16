@@ -213,7 +213,6 @@
         .toggle-setting input:checked + .toggle-switch { background: var(--green); box-shadow: 0 0 12px rgba(16,137,62,0.4); }
         .toggle-setting input:checked + .toggle-switch::after { left: 22px; }
 
-        /* Показывать текст кнопок на десктопе, скрывать на мобильных */
         @media (min-width: 768px) {
             .btn-text, .toggle-text { display: inline; }
         }
@@ -249,7 +248,6 @@
             min-height: 100px;
         }
 
-        /* Таблица (десктоп) */
         table { width: 100%; border-collapse: collapse; }
         th {
             background: rgba(0,120,212,0.06); padding: 10px 6px;
@@ -310,7 +308,6 @@
         tr.animate-move-up { animation: moveUp 0.3s ease forwards; }
         tr.animate-move-down { animation: moveDown 0.3s ease forwards; }
 
-        /* Мобильные карточки */
         .mobile-cards { display: none; flex-direction: column; gap: 10px; }
         .card {
             background: var(--card-bg); border-radius: 12px; padding: 12px;
@@ -349,7 +346,6 @@
             color: var(--gold); font-size: 14px;
         }
 
-        /* Адаптивность */
         @media (min-width: 1100px) {
             .table-section { min-width: 1100px; }
             .preview-section { flex: 0 0 750px; }
@@ -366,7 +362,7 @@
             body { padding: 10px; }
             .header { flex-wrap: wrap; gap: 10px; }
             .logo-text h1 { font-size: 18px; }
-            .logo-text span { display: none; }
+            .logo-text span { font-size: 10px; }
             .project-name-input { width: 120px; }
             .controls { padding: 10px; gap: 6px; }
             .controls button, .controls select { padding: 8px 10px; font-size: 12px; }
@@ -388,7 +384,10 @@
     <div class="header">
         <div class="logo">
             <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h6l-1 8 10-12h-6l1-8z"/></svg></div>
-            <div class="logo-text"><h1>Маркировка электрощита</h1><span>Система маркировки электрических щитов</span></div>
+            <div class="logo-text">
+                <h1>Маркировка электрощита</h1>
+                <span>Адаптивная версия 1.0 Final</span>
+            </div>
         </div>
         <div class="header-right">
             <input type="text" class="project-name-input" id="projectName" placeholder="Название проекта" oninput="updateTitle()">
@@ -741,38 +740,15 @@
                     if (data.groupName === 'Другое') {
                         groupHTML += `<input type="text" class="other-input" placeholder="Введите назначение..." value="${data.groupCustom || ''}" oninput="updateCustomField(${i},'groupCustom',this.value)">`;
                     }
-
-                    // Добавляем селекторы шрифта в карточку
                     card.innerHTML = `
                         <div class="card-header">Группа №${i + 1}</div>
                         <div class="card-row"><span class="card-label">Модуль</span><div class="card-value">${selectHTML([['1','1 м'],['2','2 м'],['3','3 м'],['4','4 м']], data.moduleType, i, 'moduleType')}</div></div>
-                        <div class="card-row">
-                            <span class="card-label">Номер</span>
-                            <div class="card-value">
-                                <input type="text" class="group-input${auto?' auto':''}" value="${data.groupNumber||''}" ${auto?'readonly':''} onchange="updateField(${i},'groupNumber',this.value)">
-                                <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
-                                    <span style="font-size:10px;">Шрифт:</span>${fontSelectHTML('font-group', data.fontGroup, i, 'fontGroup')}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-row">
-                            <span class="card-label">Помещ.</span>
-                            <div class="card-value">
-                                ${roomHTML}
-                                <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
-                                    <span style="font-size:10px;">Шрифт:</span>${fontSelectHTML('font-room', data.fontRoom, i, 'fontRoom')}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-row">
-                            <span class="card-label">Назнач.</span>
-                            <div class="card-value">
-                                ${groupHTML}
-                                <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
-                                    <span style="font-size:10px;">Шрифт:</span>${fontSelectHTML('font-groupname', data.fontGroupName, i, 'fontGroupName')}
-                                </div>
-                            </div>
-                        </div>
+                        <div class="card-row"><span class="card-label">Номер</span><div class="card-value"><input type="text" class="group-input${auto?' auto':''}" value="${data.groupNumber||''}" ${auto?'readonly':''} onchange="updateField(${i},'groupNumber',this.value)"></div></div>
+                        <div class="card-row"><span class="card-label">Шрифт гр.</span><div class="card-value">${fontSelectHTML('font-group', data.fontGroup, i, 'fontGroup')}</div></div>
+                        <div class="card-row"><span class="card-label">Помещ.</span><div class="card-value">${roomHTML}</div></div>
+                        <div class="card-row"><span class="card-label">Шрифт пом.</span><div class="card-value">${fontSelectHTML('font-room', data.fontRoom, i, 'fontRoom')}</div></div>
+                        <div class="card-row"><span class="card-label">Назнач.</span><div class="card-value">${groupHTML}</div></div>
+                        <div class="card-row"><span class="card-label">Шрифт назн.</span><div class="card-value">${fontSelectHTML('font-groupname', data.fontGroupName, i, 'fontGroupName')}</div></div>
                         <div class="card-row"><span class="card-label">Иконка</span><div class="card-value">${iconSelectHTML(data.iconType, i)}</div></div>
                         <div class="card-actions">
                             <button class="move-btn" onclick="moveRow(${i},'up')" title="Вверх">▲</button>
